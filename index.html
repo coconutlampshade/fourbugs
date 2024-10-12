@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Four Bug Problem</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        canvas {
+            border: 1px solid black;
+            margin-top: 20px;
+        }
+        .controls {
+            margin-top: 20px;
+        }
+        .explanation {
+            max-width: 600px;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .credit {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <h1>The Four Bug Problem</h1>
+    <canvas id="bugCanvas" width="400" height="400"></canvas>
+    <div class="controls">
+        <button id="startButton">Start</button>
+        <button id="stopButton">Stop</button>
+        <button id="repeatButton">Repeat</button>
+    </div>
+    <div class="explanation">
+        <p>The Four Bug Problem is a classic mathematical puzzle that involves four bugs moving simultaneously on a square plane. Each bug moves at a constant speed directly towards the bug in front of it in a clockwise direction. The bugs follow spiral paths as they move, maintaining a rectangular formation that shrinks and rotates.</p>
+        <p>Watch the animation to see the paths the bugs take</p>
+    </div>
+    <div class="credit">
+        <p>From <a href="https://themagnet.substack.com">The Magnet</a>. Programmed using <a href="https://cursor.com">Cursor</a></p>
+    </div>
+    <script>
+        const canvas = document.getElementById('bugCanvas');
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+        let animationId;
+        let frameCount = 0;
+
+        class Bug {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.prevX = x;
+                this.prevY = y;
+                this.color = color;
+                this.trail = [{ x: x, y: y }];
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            moveTo(targetX, targetY, speed) {
+                this.prevX = this.x;
+                this.prevY = this.y;
+                const dx = targetX - this.x;
+                const dy = targetY - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance > speed) {
+                    this.x += (dx / distance) * speed;
+                    this.y += (dy / distance) * speed;
+                } else {
+                    this.x = targetX;
+                    this.y = targetY;
+                }
+                this.trail.push({ x: this.x, y: this.y });
+            }
+
+            drawTrail() {
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                for (let i = 0; i < this.trail.length - 1; i++) {
+                    ctx.moveTo(this.trail[i].x, this.trail[i].y);
+                    ctx.lineTo(this.trail[i + 1].x, this.trail[i + 1].y);
+                }
+                ctx.stroke();
+            }
+        }
+
+        let bugs = [
+            new Bug(50, 50, 'red'),
+            new Bug(350, 50, 'blue'),
+            new Bug(350, 350, 'green'),
+            new Bug(50, 350, 'purple')
+        ];
+
+        function resetBugs() {
+            bugs = [
+                new Bug(50, 50, 'red'),
+                new Bug(350, 50, 'blue'),
+                new Bug(350, 350, 'green'),
+                new Bug(50, 350, 'purple')
+            ];
+        }
+
+        function drawInitialState() {
+            ctx.clearRect(0, 0, width, height);
+            for (let i = 0; i < bugs.length; i++) {
+                bugs[i].draw();
+            }
+        }
+
+        function animate() {
+            // Apply a semi-transparent white rectangle over the entire canvas
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
+            ctx.fillRect(0, 0, width, height);
+
+            for (let i = 0; i < bugs.length; i++) {
+                const targetBug = bugs[(i + 1) % bugs.length];
+                bugs[i].moveTo(targetBug.x, targetBug.y, 0.5);
+                bugs[i].drawTrail();
+                bugs[i].draw();
+            }
+
+            // Draw lines between the bugs to form rotating squares every 0.5 seconds
+            if (frameCount % 30 === 0) {
+                ctx.lineWidth = 2;
+                for (let i = 0; i < bugs.length; i++) {
+                    const nextBug = bugs[(i + 1) % bugs.length];
+                    ctx.beginPath();
+                    ctx.strokeStyle = bugs[i].color;
+                    ctx.moveTo(bugs[i].x, bugs[i].y);
+                    ctx.lineTo(nextBug.x, nextBug.y);
+                    ctx.stroke();
+                }
+            }
+
+            frameCount++;
+            animationId = requestAnimationFrame(animate);
+        }
+
+        document.getElementById('startButton').addEventListener('click', () => {
+            if (!animationId) {
+                animate();
+            }
+        });
+
+        document.getElementById('stopButton').addEventListener('click', () => {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+        });
+
+        document.getElementById('repeatButton').addEventListener('click', () => {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            ctx.clearRect(0, 0, width, height);
+            resetBugs();
+            drawInitialState();
+            frameCount = 0;
+            animate();
+        });
+
+        // Draw the initial state when the page loads
+        drawInitialState();
+    </script>
+</body>
+</html>
